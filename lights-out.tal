@@ -1,0 +1,198 @@
+( Lights out )
+
+|00 @System &catch $2 &expansion $2 &pad $2 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
+|10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
+|20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|30 @Audio0 &vector $2 &position $2 &output $1 &pad $3 &adsr $2 &length $2 &addr $2 &volume $1 &pitch $1
+|40 @Audio1 &vector $2 &position $2 &output $1 &pad $3 &adsr $2 &length $2 &addr $2 &volume $1 &pitch $1
+|50 @Audio2 &vector $2 &position $2 &output $1 &pad $3 &adsr $2 &length $2 &addr $2 &volume $1 &pitch $1
+|60 @Audio3 &vector $2 &position $2 &output $1 &pad $3 &adsr $2 &length $2 &addr $2 &volume $1 &pitch $1
+|80 @Controller &vector $2 &button $1 &key $1
+|90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
+|a0 @File1 &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+|b0 @File2 &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+|c0 @DateTime &year $2 &month $1 &day $1 &hour $1 &minute $1 &second $1 &dotw $1 &doty $2 &isdst $1
+|000
+
+	@field $19 &end
+	@score $2
+	@game $1
+
+|100
+
+@On-start ( -> )
+	#f01f .System/r DEO2
+	#e07f .System/g DEO2
+	#a0bf .System/b DEO2
+	#0098 .Screen/width DEO2
+	#00b8 .Screen/height DEO2
+	;on-mouse .Mouse/vector DEO2
+	;on-button .Controller/vector DEO2
+	<prng-init>
+	<init>
+	BRK
+
+@on-mouse ( -> )
+	;cursor-icn .Screen/addr DEO2
+	[ LIT2 00 -Screen/auto ] DEO
+	[ LIT2 &x $2 ] [ LIT2 &y $2 ] #40 <draw-pointer>
+	.Mouse/x DEI2 DUP2 ,&x STR2
+	.Mouse/y DEI2 DUP2 ,&y STR2
+	#42 <draw-pointer>
+	[ LIT &old $1 ] [ LIT2 00 -Mouse/state ] DEI NEQ DUP ,&old STR
+	#0001 EQU2 [ JMP BRK ]
+	( | tap the field )
+	.game LDZ ?{
+		.Mouse/y DEI2 #0030 SUB2 DUP2 #0078 GTH2 ?{
+			#0018 DIV2 NIP .Mouse/x DEI2 #0010 SUB2 DUP2 #0078 GTH2 ?{
+				#0018 DIV2 NIP <cross>
+				<win>
+				<draw> }
+			}
+		}
+	( | tap the diamond )
+	.Mouse/y DEI2 #0010 SUB2 #0018 GTH2 ?{
+		.Mouse/x DEI2 #0070 SUB2 #0018 GTH2 ?{ <init> }
+		}
+	BRK
+
+@on-button ( -> )
+	.Controller/button DEI DUP #08 EQU ?<exit>
+	#01 EQU [ JMP BRK ] [ LIT2 "q -Controller/key ] DEI EQU ?<exit>
+	BRK
+
+@<exit> ( -> )
+	#800f DEO
+	BRK
+
+@<init> ( -- )
+	#1900
+	&l ( -- )
+		prng NIP #01 AND ?{
+			DUP #05 DIVk STHk MUL SUB STHr <cross> }
+		INC NEQk ?&l
+	POP2 #0000 .score STZ2
+	[ LIT2 00 -game ] STZ
+	<draw>
+	JMP2r
+
+@<win> ( -- )
+	[ LIT2 -field/end -field ] LDZk STH
+	INC
+	&l ( >_< )
+		LDZk STHrk EQU ?{ POPr POP2 JMP2r }
+		INC NEQk ?&l
+	POPr POP2 [ LIT2 01 -game ] STZ
+	JMP2r
+
+@<cross> ( y x -- )
+	STH2
+	;&end ;&steps
+	&l ( -- )
+		LDA2k STH2rk ROT ADD STH
+		ADD STHr DUP #04 GTH ?{
+			OVR #04 GTH ?{
+				( toggle ) DUP2 pos-tile LDZk #01 EOR SWP STZ }
+			}
+		POP2 INC2 INC2 NEQ2k ?&l
+	POP2r POP2 POP2 .score LDZ2k INC2 #03e7 LTH2k [ JMP SWP2 ] POP2 ROT STZ2
+	JMP2r
+	&steps [ 00ff ff00 0000 0100 0001 ]
+	&end
+
+@<draw> ( -- )
+	<clear-screen>
+	[ LIT2 26 -Screen/auto ] DEO
+	( | diamond )
+	#0070 .Screen/x DEO2
+	#0010 .Screen/y DEO2
+	;diamond-icn .Screen/addr DEO2
+	[ LIT2 01 -game ] LDZ ADD .Screen/sprite DEOk DEOk DEO
+	( | field )
+	#0010 .Screen/x DEO2
+	#0500
+	&x ( -- )
+		#0030 .Screen/y DEO2
+		#00
+	&y ( -- )
+		SWPk pos-tile LDZ ;dot-icn ROT ?{ #0048 ADD2 }
+		.Screen/addr DEO2
+		[ LIT2 01 -Screen/sprite ] DEOk DEOk DEO
+		INC DUP #05 NEQ ?&y
+	POP .Screen/x DEI2k #0018 ADD2 ROT DEO2
+	INC NEQk ?&x
+	POP2
+	( >> )
+
+@Draw-score ( -- )
+	[ LIT2 01 -Screen/auto ] DEO
+	[ LIT2 ff -score ] LDZ2
+	&digit ( >_< )
+		#000a DIV2k STH2k MUL2 SUB2 STH2r ORAk ?&digit
+	POP2 #0010 .Screen/x DEO2
+	&l ( >_< )
+		INCk ?{ POP JMP2r }
+		#0009 MUL2 ;digit-mosaic ADD2 STH2
+		#0010 .Screen/y DEO2
+		#0300
+	&y ( -- )
+		#0300
+	&x ( -- )
+		#00 STH2rk LDA ;digit-pieces-icn ADD2 .Screen/addr DEO2
+		[ LIT2 01 -Screen/sprite ] DEO
+		INC2r INC GTHk ?&x
+	POP2 .Screen/x DEI2k #0018 SUB2 ROT DEO2
+	.Screen/y DEI2k #0008 ADD2 ROT DEO2
+	INC GTHk ?&y
+	POP2 POP2r .Screen/x DEI2k #001a ADD2 ROT DEO2
+	!&l
+
+@<clear-screen> ( -- )
+	#0000 .Screen/x DEO2k INC INC DEO2
+	[ LIT2 80 -Screen/pixel ] DEO
+	JMP2r
+
+@<draw-pointer> ( x* y* sprite -- )
+	STH
+	[ LIT2r fffd ] STH2rk ADD2 .Screen/y DEO2
+	STH2r ADD2 .Screen/x DEO2
+	STHr .Screen/sprite DEO
+	JMP2r
+
+@pos-tile ( x y -- addr )
+	#05 MUL ADD .field ADD JMP2r
+
+@<prng-init> ( -- )
+	[ LIT2 00 -DateTime/second ] DEI [ LIT2 00 -DateTime/minute ] DEI #60 SFT2 EOR2 [ LIT2 00 -DateTime/hour ] DEI #c0 SFT2 EOR2 ,prng/x STR2
+	[ LIT2 00 -DateTime/hour ] DEI #04 SFT2 [ LIT2 00 -DateTime/day ] DEI #10 SFT2 EOR2 [ LIT2 00 -DateTime/month ] DEI #60 SFT2 EOR2 .DateTime/year DEI2 #a0 SFT2 EOR2 ,prng/y STR2
+	JMP2r
+
+@prng ( -- number* )
+	[ LIT2 &x $2 ] DUP2 #50 SFT2 EOR2 DUP2 #03 SFT2 EOR2 [ LIT2 &y $2 ] DUP2 ,&x STR2
+	DUP2 #01 SFT2 EOR2 EOR2 ,&y STR2k POP JMP2r
+
+@cursor-icn [ c6c6 0000 00c6 c600 ]
+
+@dot-icn [
+	0000 0307 0f1f 3f3f 00ff ffff ffff ffff
+	0000 c0e0 f0f8 fcfc 7f7f 7f7f 7f7f 7f7f
+	ffff ffff ffff ffff fefe fefe fefe fefe
+	3f3f 1f0f 0703 0000 ffff ffff ffff ff00
+	fcfc f8f0 e0c0 0000 ] [
+	0000 0307 0e1c 3830 00ff ff81 0000 0000
+	0000 c0e0 7038 1c0c 7060 6060 6060 6070
+	0000 0000 0000 0000 0e06 0606 0606 060e
+	3038 1c0e 0703 0000 0000 0000 81ff ff00
+	0c1c 3870 e0c0 0000 0000 0000 0000 0000 ]
+
+@diamond-icn [
+	0000 0000 0000 0000 0010 1010 3838 7cfe
+	0000 0000 0000 0000 0103 0f7f 0f03 0100
+	ffff ffff ffff fffe 0080 e0fc e080 0000
+	0000 0000 0000 0000 7c38 3810 1010 0000
+	0000 0000 0000 0000 ]
+
+@digit-pieces-icn [ 0000 0000 0000 0000 ] [ ffff ffff ffff ffff ] [ ffff ffff ffff 0000 ]
+
+@digit-mosaic [ 08 10 08 08 00 08 08 08 08 ] [ 10 08 00 00 08 00 08 08 08 ] [ 10 10 08 08 10 10 08 08 08 ] [ 00 10 08 00 10 08 08 08 08 ] [ 08 00 08 10 10 08 00 00 08 ] [ 08 10 10 10 10 08 08 08 08 ] [ 08 10 10 08 10 08 08 08 08 ] [ 10 10 08 00 08 10 00 08 00 ] [ 08 10 08 08 10 08 08 08 08 ] [ 08 10 08 10 10 08 08 08 08 ]
+

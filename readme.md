@@ -1,6 +1,6 @@
 ## Lights out for Uxn
 
-![preview.png](preview image)
+![preview image](preview.png)
 
 tap a dot to switch it and its neighbors. press ctrl-q to exit.
 

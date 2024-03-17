@@ -2,7 +2,7 @@
 
 ![preview image](preview.png)
 
-tap a dot to switch it and its neighbors. press ctrl-q to exit.
+tap a dot to switch it and its neighbours. press ctrl-q to exit.
 
 ---
 

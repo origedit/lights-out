@@ -2,7 +2,7 @@
 
 ![preview image](preview.png)
 
-tap a dot to switch it and its neighbours. press ctrl-q to exit.
+tap a dot to switch it and its neighbours. make all the dots the same color to win. press ctrl-q to exit.
 
 ---
 
